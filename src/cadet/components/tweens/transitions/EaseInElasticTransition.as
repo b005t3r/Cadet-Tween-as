@@ -1,0 +1,27 @@
+/**
+ * User: booster
+ * Date: 8/29/13
+ * Time: 10:04
+ */
+package cadet.components.tweens.transitions {
+import cadet.components.processes.*;
+
+public class EaseInElasticTransition implements ITweenTransition {
+    public function get name():String {
+        return "Elastic Ease In";
+    }
+
+    public function value(v:Number):Number {
+        if (v == 0 || v == 1) {
+            return v;
+        }
+        else {
+            const p:Number = 0.3;
+            const s:Number = p / 4.0;
+            var inv:Number = v - 1;
+
+            return -1.0 * Math.pow(2.0, 10.0 * inv) * Math.sin((inv - s) * (2.0 * Math.PI) / p);
+        }
+    }
+}
+}
