@@ -32,16 +32,18 @@ public class TimeFrameComponent extends ComponentContainer implements ITimeFrame
             validateNow();
 
         totalTime       = Math.min(_startTime + _childTweenDuration, Math.max(0, totalTime));
-        _currentTime    = TweenUtil.roundTime(totalTime);
+        _currentTime    = totalTime;
 
         _childTween.seek(_currentTime - _startTime - _childTween.delay);
 
         return _currentTime;
     }
 
+    public function get currentTime():Number { return _currentTime; }
+
     public function get startTime():Number { return _startTime; }
     public function set startTime(value:Number):void {
-        _startTime = TweenUtil.roundTime(value);
+        _startTime = value;
 
         invalidate(START_TIME); // only to dispatch the event
     }
@@ -60,7 +62,7 @@ public class TimeFrameComponent extends ComponentContainer implements ITimeFrame
         if(isInvalid(DURATION))
             validateNow();
 
-        var ratio:Number        = TweenUtil.roundTime(value) / _childTweenDuration;
+        var ratio:Number        = value / _childTweenDuration;
 
         _childTween.duration    *= ratio;
         _childTween.delay       *= ratio;
@@ -70,23 +72,33 @@ public class TimeFrameComponent extends ComponentContainer implements ITimeFrame
     }
 
     public function advance(dt:Number):void {
-        if(_childTween == null)
+        if(_childTween == null || dt == 0)
             return;
 
         if(isInvalid(DURATION))
             validateNow();
 
-        dt = TweenUtil.roundTime(dt);
+        var previousTime:Number = _currentTime;
 
-        _currentTime = TweenUtil.roundTime(_currentTime + dt);
+        _currentTime += dt;
 
-        // let it advance for one dt more
-        if(_currentTime < _startTime || _currentTime - dt > _startTime + _childTweenDuration)
+        if((dt > 0 && (_currentTime < _startTime || _currentTime - dt > _startTime + _childTweenDuration))
+        || (dt < 0 && (_currentTime - dt < _startTime || _currentTime > _startTime + _childTweenDuration))) {
+            if(_currentTime < 0)
+                _currentTime = 0;
+            else if(_currentTime > _startTime + _childTweenDuration)
+                _currentTime = _startTime + _childTweenDuration;
+
             return;
+        }
 
-        //trace("--- [advanced: " + _currentTime + "] ---");
+        var reminder:Number = 0;
 
-        _childTween.advance(dt);
+        if(dt > 0)  reminder = _currentTime - _startTime;
+        else        reminder = _currentTime - (_startTime + _childTweenDuration);
+
+        if(Math.abs(reminder) < Math.abs(dt))   _childTween.advance(reminder);
+        else                                    _childTween.advance(dt);
     }
 
     protected function onChildTweenInvalidated(event:ValidationEvent):void { invalidate(DURATION); }

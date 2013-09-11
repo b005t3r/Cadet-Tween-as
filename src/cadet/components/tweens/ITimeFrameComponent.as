@@ -17,6 +17,9 @@ public interface ITimeFrameComponent extends IAdvanceableComponent, IComponentCo
      */
     function seek(totalTime:Number, suppressEvents:Boolean = true):Number
 
+    /** The time that has passed since this time frame was created (in seconds). */
+    function get currentTime():Number
+
     /** When does the time frame start. */
     function get startTime():Number
     function set startTime(value:Number):void

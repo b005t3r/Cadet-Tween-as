@@ -9,14 +9,13 @@ package cadet.components.tweens {
 import cadet.components.tweens.transitions.ITweenTransition;
 import cadet.core.IComponent;
 import cadet.events.ValidationEvent;
-import cadet.util.TweenUtil;
 
 public class TimelineComponent extends AbstractTweenComponent implements ITimelineComponent {
     protected var _started:Boolean      = false;
     protected var _paused:Boolean       = false;
-    protected var _dt:Number            = 0;
+    protected var _prevProgress:Number  = 0;
 
-    public function TimelineComponent(time:Number = 1, transition:ITweenTransition = null, name:String = "Timeline") {
+    public function TimelineComponent(time:Number = 0, transition:ITweenTransition = null, name:String = "Timeline") {
         super(time, transition, name);
 
         reset(time, transition);
@@ -46,7 +45,7 @@ public class TimelineComponent extends AbstractTweenComponent implements ITimeli
         if(isInvalid(DURATION))
             validateNow();
 
-        var ratio:Number = TweenUtil.roundTime(value) / _duration;
+        var ratio:Number = value / _duration;
 
         for each (var timeFrame:ITimeFrameComponent in children) {
             timeFrame.duration  *= ratio;
@@ -57,10 +56,7 @@ public class TimelineComponent extends AbstractTweenComponent implements ITimeli
     }
 
     override public function advance(dt:Number):void {
-        _dt = TweenUtil.roundTime(dt);
-
-        if(isInvalid(DURATION))
-            validateNow();
+        _prevProgress = _progress;
 
         super.advance(dt);
     }
@@ -82,8 +78,21 @@ public class TimelineComponent extends AbstractTweenComponent implements ITimeli
     override protected function animationStarted():void { _started = true; }
 
     override protected function animationUpdated():void {
-        for each (var timeFrame:ITimeFrameComponent in children)
-            timeFrame.advance(_dt);
+        var dt:Number = _duration * _progress - _duration * _prevProgress;
+
+        for each (var timeFrame:ITimeFrameComponent in children) {
+            var diff:Number = timeFrame.startTime + timeFrame.duration - timeFrame.currentTime;
+
+            if(diff <= 0)
+                continue;
+
+            if(_progress == 1 && dt > 0)
+                timeFrame.advance(Math.ceil(diff * 1000000) / 1000000); // to solve floating-point accuracy problems
+            else if(_progress == 0 && dt < 0)
+                timeFrame.advance(Math.floor(diff * 1000000) / 1000000); // to solve floating-point accuracy problems
+            else
+                timeFrame.advance(dt);
+        }
     }
 
     protected function onChildInvalidated(event:ValidationEvent):void { invalidate(DURATION); }
@@ -122,7 +131,7 @@ public class TimelineComponent extends AbstractTweenComponent implements ITimeli
         _duration = 0;
 
         for each (var timeFrame:ITimeFrameComponent in children)
-            _duration = Math.max(_duration, TweenUtil.roundTime(timeFrame.startTime + timeFrame.duration));
+            _duration = Math.max(_duration, timeFrame.startTime + timeFrame.duration);
     }
 }
 }

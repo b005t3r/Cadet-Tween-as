@@ -19,10 +19,6 @@ public class TweenUtil {
             return tween.delay + tween.repeatCount * tween.duration + (tween.repeatCount - 1) * tween.repeatDelay;
     }
 
-    public static function roundTime(time:Number):Number {
-        return Math.round(time * 1000000) / 1000000;
-    }
-
     public function TweenUtil() { throw new UninitializedError("this is a static class"); }
 }
 }
