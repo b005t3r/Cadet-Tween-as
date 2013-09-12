@@ -5,6 +5,7 @@
  */
 
 package cadet.components.tweens {
+import cadet.components.tweens.transitions.CompoundTransition;
 import cadet.components.tweens.transitions.ITweenTransition;
 
 public interface ITweenComponent extends IAdvanceableComponent {
@@ -18,7 +19,7 @@ public interface ITweenComponent extends IAdvanceableComponent {
      * @param suppressEvents    if true, no events will be dispatched
      * @returns                 new current time (not the given value)
      */
-    function seek(totalTime:Number, suppressEvents:Boolean = true):Number
+    function seek(totalTime:Number, suppressEvents:Boolean = true, parentTransition:CompoundTransition = null):Number
 
     /** Indicates if execution of the tween has started. */
     function get started():Boolean

@@ -4,10 +4,11 @@
  * Time: 10:22
  */
 package cadet.components.tweens {
+import cadet.components.tweens.transitions.CompoundTransition;
 import cadet.core.IComponent;
 
 public interface IAdvanceableComponent extends IComponent {
     /** Called by the JugglerProcess, advances this component by dt seconds. */
-    function advance(dt:Number):void
+    function advance(dt:Number, parentTransition:CompoundTransition):void
 }
 }

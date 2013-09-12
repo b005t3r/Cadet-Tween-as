@@ -5,6 +5,7 @@
  */
 
 package cadet.components.tweens {
+import cadet.components.tweens.transitions.CompoundTransition;
 import cadet.core.IComponentContainer;
 
 public interface ITimeFrameComponent extends IAdvanceableComponent, IComponentContainer {
@@ -13,9 +14,10 @@ public interface ITimeFrameComponent extends IAdvanceableComponent, IComponentCo
      *
      * @param totalTime         new totalTime, including repetitions and repetition delays; negative value means initial delay
      * @param suppressEvents    if true, no events will be dispatched
+     * @param parentTransition  compound transition fo all parent timelines
      * @returns                 new current time (not the given value)
      */
-    function seek(totalTime:Number, suppressEvents:Boolean = true):Number
+    function seek(totalTime:Number, suppressEvents:Boolean = true, parentTransition:CompoundTransition = null):Number
 
     /** The time that has passed since this time frame was created (in seconds). */
     function get currentTime():Number

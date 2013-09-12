@@ -6,6 +6,7 @@
 
 package cadet.components.tweens {
 
+import cadet.components.tweens.transitions.CompoundTransition;
 import cadet.components.tweens.transitions.ITweenTransition;
 import cadet.core.IComponent;
 
@@ -130,7 +131,7 @@ public class TweenComponent extends AbstractTweenComponent {
             validateProperties();
     }
 
-    override protected function animationUpdated():void {
+    override protected function animationUpdated(parentTransition:CompoundTransition):void {
         var numProperties:int = _properties.length;
 
         for(var i:int = 0; i < numProperties; ++i) {

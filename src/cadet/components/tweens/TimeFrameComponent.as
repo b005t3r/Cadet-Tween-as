@@ -4,6 +4,7 @@
  * Time: 9:46
  */
 package cadet.components.tweens {
+import cadet.components.tweens.transitions.CompoundTransition;
 import cadet.core.ComponentContainer;
 import cadet.core.IComponent;
 import cadet.events.ValidationEvent;
@@ -15,7 +16,7 @@ public class TimeFrameComponent extends ComponentContainer implements ITimeFrame
 
     protected var _startTime:Number             = 0;
     protected var _currentTime:Number           = 0;
-    protected var _childTween:ITweenComponent   = null;
+    private var _childTween:ITweenComponent   = null;
     protected var _childTweenDuration:Number    = 0;
 
     public function TimeFrameComponent(startTime:Number = 0,  name:String = "TimeFrame") {
@@ -24,20 +25,22 @@ public class TimeFrameComponent extends ComponentContainer implements ITimeFrame
         _startTime = startTime;
     }
 
-    public function seek(totalTime:Number, suppressEvents:Boolean = true):Number {
+    public function seek(totalTime:Number, suppressEvents:Boolean = true, parentTransition:CompoundTransition = null):Number {
         if(_childTween == null)
             return 0;
 
         if(isInvalid(DURATION))
             validateNow();
 
-        totalTime       = Math.min(_startTime + _childTweenDuration, Math.max(0, totalTime));
+        //totalTime       = Math.min(_startTime + _childTweenDuration, Math.max(0, totalTime));
         _currentTime    = totalTime;
 
-        _childTween.seek(_currentTime - _startTime - _childTween.delay);
+        _childTween.seek(_currentTime - _startTime - _childTween.delay, parentTransition);
 
         return _currentTime;
     }
+
+    public function get childTween():ITweenComponent { return _childTween; }
 
     public function get currentTime():Number { return _currentTime; }
 
@@ -64,14 +67,21 @@ public class TimeFrameComponent extends ComponentContainer implements ITimeFrame
 
         var ratio:Number        = value / _childTweenDuration;
 
-        _childTween.duration    *= ratio;
-        _childTween.delay       *= ratio;
-        _childTween.repeatDelay *= ratio;
+        if(ratio < 1) {
+            _childTween.duration    = (100.0 * ratio * _childTween.duration) / 100.0;
+            _childTween.delay       = (100.0 * ratio * _childTween.delay) / 100.0;
+            _childTween.repeatDelay = (100.0 * ratio * _childTween.repeatDelay) / 100.0;
+        }
+        else {
+            _childTween.duration    = ratio * _childTween.duration;
+            _childTween.delay       = ratio * _childTween.delay;
+            _childTween.repeatDelay = ratio * _childTween.repeatDelay;
+        }
 
         invalidate(DURATION);
     }
 
-    public function advance(dt:Number):void {
+    public function advance(dt:Number, parentTransition:CompoundTransition):void {
         if(_childTween == null || dt == 0)
             return;
 
@@ -83,22 +93,16 @@ public class TimeFrameComponent extends ComponentContainer implements ITimeFrame
         _currentTime += dt;
 
         if((dt > 0 && (_currentTime < _startTime || _currentTime - dt > _startTime + _childTweenDuration))
-        || (dt < 0 && (_currentTime - dt < _startTime || _currentTime > _startTime + _childTweenDuration))) {
-            if(_currentTime < 0)
-                _currentTime = 0;
-            else if(_currentTime > _startTime + _childTweenDuration)
-                _currentTime = _startTime + _childTweenDuration;
-
+        || (dt < 0 && (_currentTime - dt < _startTime || _currentTime > _startTime + _childTweenDuration)))
             return;
-        }
 
         var reminder:Number = 0;
 
         if(dt > 0)  reminder = _currentTime - _startTime;
         else        reminder = _currentTime - (_startTime + _childTweenDuration);
 
-        if(Math.abs(reminder) < Math.abs(dt))   _childTween.advance(reminder);
-        else                                    _childTween.advance(dt);
+        if(Math.abs(reminder) < Math.abs(dt))   _childTween.advance(reminder, parentTransition);
+        else                                    _childTween.advance(dt, parentTransition);
     }
 
     protected function onChildTweenInvalidated(event:ValidationEvent):void { invalidate(DURATION); }
