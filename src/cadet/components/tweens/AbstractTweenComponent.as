@@ -22,7 +22,7 @@ public class AbstractTweenComponent extends ComponentContainer implements ITween
     protected var _transition:ITweenTransition          = null; // null means linear
 
     protected var _duration:Number                      = 1;
-    protected var _currentTime:Number                   = 0;
+    protected var _currentCycleTime:Number              = 0;
     protected var _progress:Number                      = 0;
     protected var _delay:Number                         = 0;
     protected var _roundToInt:Boolean                   = false;
@@ -30,7 +30,7 @@ public class AbstractTweenComponent extends ComponentContainer implements ITween
     protected var _repeatDelay:Number                   = 0;
     protected var _repeatReversed:Boolean               = false;
     protected var _reversed:Boolean                     = false;
-    protected var _currentCycle:int                     = -1;
+    protected var _currentCycle:int                     = 0;
 
     protected var _listeners:Dictionary                 = new Dictionary();
 
@@ -80,8 +80,7 @@ public class AbstractTweenComponent extends ComponentContainer implements ITween
             validateNow();
 
         // this tween has finished its execution on the previous advance() call
-        if((_currentTime == _duration && _currentTime + dt >_duration)
-        || (_currentTime == 0 && _currentTime + dt < 0))
+        if(isFinished(dt))
             return;
 
         if(! started) {
@@ -94,24 +93,27 @@ public class AbstractTweenComponent extends ComponentContainer implements ITween
                 dispatchEvent(_startedEvent);
         }
 
-        var previousTime:Number = _currentTime;
+        var nextCycle:int       = _currentCycle;
+        var currentDelay:Number = currentCycleDelay;
+        var previousTime:Number = _currentCycleTime;
+        _currentCycleTime           += dt;
 
-        _currentTime += dt;
+        // update cycle counter
+        if(previousTime <= _duration && _currentCycleTime > _duration)
+            nextCycle++;
+        else if(previousTime > -currentDelay && _currentCycleTime <= -currentDelay)
+            nextCycle--;
 
-        if(_currentTime < -_delay)
-            _currentTime = -_delay;
-        else if(_currentTime > _duration)
-            _currentTime = _duration;
+        // normalize current time between [-delay; duration] or [-repeatDelay; duration] depending on current cycle
+        normalizeCurrentTime();
 
-        if(_currentTime <= 0)
-            return; // the delay is not over yet
-
-        if(_currentCycle < 0 && previousTime <= 0 && _currentTime > 0)
-            _currentCycle++;
+        // the delay is not over yet
+        if(_currentCycleTime <= 0 && previousTime <= 0 && _currentCycle == nextCycle)
+            return;
 
         parentTransition.pushTransition(_transition);
         {
-            _progress = calculateProgress(_currentTime, parentTransition);
+            _progress = calculateProgress(_currentCycleTime, parentTransition);
 
             animationUpdated(parentTransition);
         }
@@ -120,10 +122,20 @@ public class AbstractTweenComponent extends ComponentContainer implements ITween
         if(hasEventListener(TweenEvent.ADVANCED))
             dispatchEvent(_advancedEvent);
 
-        if(previousTime < _duration && _currentTime >= _duration) {
-            if(_repeatCount == 0 || _currentCycle < _repeatCount - 1) {
-                _currentTime = -_repeatDelay;
-                _currentCycle++;
+        // advance this tween
+        _currentCycle = nextCycle;
+
+        var restTime:Number, carryOverTime:Number = 0;
+
+        // update current time
+        // 1. going forward
+        if(previousTime < _duration && _currentCycleTime >= _duration) {
+            restTime        = _duration - previousTime;
+            carryOverTime   = dt > restTime ? dt - restTime : 0.0;
+
+            if(_repeatCount == 0 || _currentCycle < _repeatCount) {
+                _currentCycleTime   = -currentCycleDelay; // next cycle's delay
+                _progress           = calculateProgress(_currentCycleTime, parentTransition);
 
                 animationRepeated();
 
@@ -131,9 +143,31 @@ public class AbstractTweenComponent extends ComponentContainer implements ITween
                     dispatchEvent(_repeatedEvent);
             }
             else {
-                // in the 'onComplete' callback, people might want to call "tween.reset" and
-                // add it to another juggler; so this event has to be dispatched *before*
-                // executing 'onComplete'.
+                _currentCycle = _repeatCount - 1;
+
+                if(hasEventListener(TweenEvent.FINISHED))
+                    dispatchEvent(_finishedEvent);
+
+                return;
+            }
+        }
+        // 2. going backward - use next cycle's delay
+        else if(previousTime > -currentDelay && _currentCycleTime <= -currentDelay) {
+            restTime        = -currentDelay - previousTime;
+            carryOverTime   = dt < restTime ? dt - restTime : 0.0;
+
+            if(_repeatCount == 0 || _currentCycle >= 0) {
+                _currentCycleTime   = _duration;
+                _progress           = calculateProgress(_currentCycleTime, parentTransition);
+
+                animationRepeated();
+
+                if(hasEventListener(TweenEvent.REPEATED))
+                    dispatchEvent(_repeatedEvent);
+            }
+            else {
+                _currentCycle = 0;
+
                 if(hasEventListener(TweenEvent.FINISHED))
                     dispatchEvent(_finishedEvent);
 
@@ -141,16 +175,23 @@ public class AbstractTweenComponent extends ComponentContainer implements ITween
             }
         }
 
-        var restTime:Number         = _duration - previousTime;
-        var carryOverTime:Number    = dt > restTime ? dt - restTime : 0.0;
-
         // simulate another repetition if necessary
-        if(carryOverTime > 0)
+        if(carryOverTime != 0)
             advance(carryOverTime, parentTransition);
     }
 
+    protected function isFinished(dt:Number):Boolean {
+        return (_currentCycleTime == _duration && _currentCycleTime + dt > _duration)
+            || (_currentCycleTime == -currentCycleDelay && _currentCycleTime + dt < -currentCycleDelay);
+    }
+
+    protected function normalizeCurrentTime():void {
+        if(_currentCycleTime < -currentCycleDelay)  _currentCycleTime = -currentCycleDelay;
+        else if(_currentCycleTime > _duration)      _currentCycleTime = _duration;
+    }
+
     public function reset(duration:Number = 1, transition:ITweenTransition = null):void {
-        _currentTime            = 0.0;
+        _currentCycleTime            = 0.0;
         _duration               = Math.max(0.0001, duration);
         _progress               = 0.0;
         _delay                  = 0.0;
@@ -159,7 +200,7 @@ public class AbstractTweenComponent extends ComponentContainer implements ITween
         _repeatReversed         = false;
         _reversed               = false;
         _repeatCount            = 1;
-        _currentCycle           = -1;
+        _currentCycle           = 0;
         _transition             = transition != null ? transition : TweenTransitions.LINEAR;
 
         for(var type:String in _listeners) {
@@ -204,7 +245,7 @@ public class AbstractTweenComponent extends ComponentContainer implements ITween
         invalidate(DURATION);
     }
 
-    public function get currentTime():Number { return _currentTime; }
+    public function get currentCycleTime():Number { return _currentCycleTime; }
     public function get progress():Number { return _progress; }
 
     public function get delay():Number { return _delay; }
@@ -212,8 +253,8 @@ public class AbstractTweenComponent extends ComponentContainer implements ITween
         if(started)
             throw new Error("tween already started, call reset() first");
 
-        _currentTime   += _delay - value;
-        _delay          = value > 0 ? value : 0;
+        _currentCycleTime   += _delay - value;
+        _delay              = value > 0 ? value : 0;
 
         invalidate(DELAY);
     }
@@ -236,6 +277,11 @@ public class AbstractTweenComponent extends ComponentContainer implements ITween
         _repeatDelay = value > 0 ? value : 0;
 
         invalidate(REPEAT_DELAY);
+    }
+
+    public function get currentCycleDelay():Number {
+        if(_currentCycle == 0)  return _delay;
+        else                    return _repeatDelay;
     }
 
     public function get repeatReversed():Boolean { return _repeatReversed; }
@@ -304,34 +350,35 @@ public class AbstractTweenComponent extends ComponentContainer implements ITween
     }
 
     protected function seekImpl(totalTime:Number, suppressEvents:Boolean, parentTransition:CompoundTransition):Number {
-        totalTime       = Math.min(TweenUtil.totalDuration(this), Math.max(totalTime, -_delay));
-        _currentTime    = totalTime;
-        _currentCycle   = _currentTime < 0 ? -1 : 0;
+        totalTime           = Math.min(TweenUtil.totalDuration(this), Math.max(totalTime, -_delay));
+        _currentCycleTime   = totalTime;
+        _currentCycle       = 0;
 
         // normalize time for the current repetition and find the current cycle
-        if(_currentTime == _duration) {
-            _currentTime    = -_repeatDelay;
-            _currentCycle   = 1;
-        }
-        else if(_currentTime > _duration) {
+        if(_currentCycleTime > _duration) {
             var repeatTime:Number   = _repeatDelay + _duration;
-            var cycles:Number       = _currentTime / repeatTime;
-            var reminder:Number     = _currentTime % repeatTime;
+            var cycles:Number       = _currentCycleTime / repeatTime;
+            var reminder:Number     = _currentCycleTime % repeatTime;
 
-            _currentCycle   = Math.floor(cycles); // current cycle index, starting from 0
-            _currentTime    = reminder - _repeatDelay;
+            _currentCycle           = Math.floor(cycles); // current cycle index, starting from 0
+            _currentCycleTime       = reminder - _repeatDelay;
+
+            if(_currentCycle == _repeatCount) {
+                _currentCycle--;
+                _currentCycleTime = _duration;
+            }
         }
 
         if(parentTransition != null) {
             parentTransition.pushTransition(_transition);
-            _progress = calculateProgress(_currentTime, parentTransition);
+            _progress = calculateProgress(_currentCycleTime, parentTransition);
             parentTransition.popTransition();
         }
         else {
-            _progress = calculateProgress(_currentTime, _transition);
+            _progress = calculateProgress(_currentCycleTime, _transition);
         }
 
-        return _currentTime;
+        return _currentCycleTime;
     }
 }
 }

@@ -33,7 +33,7 @@ public interface ITweenComponent extends IAdvanceableComponent {
     function set duration(value:Number):void
 
     /** The time that has passed since the tween was created (in seconds). */
-    function get currentTime():Number
+    function get currentCycleTime():Number
 
     /** The current progress between 0 and 1, as calculated by the transition function. */
     function get progress():Number
@@ -50,6 +50,9 @@ public interface ITweenComponent extends IAdvanceableComponent {
     /** The amount of time to wait between repeat cycles (in seconds). @default 0 */
     function get repeatDelay():Number
     function set repeatDelay(value:Number):void
+
+    /** The amount of time to wait before this cycle starts executing (it's equal to either delay or repeatDelay). */
+    function get currentCycleDelay():Number
 
     /** Indicates if the tween should be reversed when it is repeating. If enabled,
      *  every second repetition will be reversed. @default false */
