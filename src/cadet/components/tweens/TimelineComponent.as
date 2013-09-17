@@ -13,9 +13,10 @@ import cadet.core.IComponent;
 import cadet.events.ValidationEvent;
 
 public class TimelineComponent extends AbstractTweenComponent implements ITimelineComponent {
-    protected var _started:Boolean      = false;
-    protected var _paused:Boolean       = false;
-    protected var _prevProgress:Number  = 0;
+    protected var _started:Boolean                                  = false;
+    protected var _paused:Boolean                                   = false;
+    protected var _prevProgress:Number                              = 0;
+    protected var _sortedTimeFrames:Vector.<ITimeFrameComponent>    = null; // initialized on start
 
     public function TimelineComponent(time:Number = 0, transition:ITweenTransition = null, name:String = "Timeline") {
         super(time, transition, name);
@@ -37,6 +38,11 @@ public class TimelineComponent extends AbstractTweenComponent implements ITimeli
     public function set paused(value:Boolean):void { _paused = value; }
 
     override public function reset(duration:Number = 0, transition:ITweenTransition = null):void {
+        _started            = false;
+        _paused             = false;
+        _prevProgress       = 0;
+        _sortedTimeFrames   = null;
+
         super.reset(duration, transition);
     }
 
@@ -68,34 +74,34 @@ public class TimelineComponent extends AbstractTweenComponent implements ITimeli
     }
 
     override public function advance(dt:Number, parentTransition:CompoundTransition):void {
+        if(_paused)
+            return;
+
         _prevProgress = _progress;
 
         super.advance(dt, parentTransition);
     }
 
     override public function seek(totalTime:Number, suppressEvents:Boolean = true, parentTransition:CompoundTransition = null):Number {
-        // don't call super.seek()
-        //_prevProgress = _progress;
+        var prevTotalTime:Number    = this.totalTime;
+        var dt:Number               = totalTime - prevTotalTime;
 
-        // TODO: reimplement - call seek only on affected timeFrames
+        if(parentTransition == null)
+            parentTransition = new CompoundTransition();
 
-        seekImpl(totalTime, suppressEvents, parentTransition);
+        var oldPaused:Boolean = _paused;
+        _paused = false;
 
-        if(parentTransition != null)
-            parentTransition.pushTransition(_transition);
+        advance(dt, parentTransition);
 
-        for each (var timeFrame:ITimeFrameComponent in children)
-            timeFrame.seek(totalTime, parentTransition);
+        _paused = oldPaused;
 
-        if(parentTransition != null)
-            parentTransition.popTransition();
-
-        return _currentCycleTime;
+        return _cycleTime;
     }
 
     override public function get started():Boolean { return _started;}
 
-    protected function sortedTimeFrames(ascending:Boolean = true):Vector.<ITimeFrameComponent> {
+    protected function sortedTimeFrames(fromStart:Boolean = true):Vector.<ITimeFrameComponent> {
         var vec:Vector.<ITimeFrameComponent> = new <ITimeFrameComponent>[];
 
         var count:int = children.length;
@@ -106,16 +112,20 @@ public class TimelineComponent extends AbstractTweenComponent implements ITimeli
 
         vec.sort(function compare(x:ITimeFrameComponent, y:ITimeFrameComponent):Number {
             // should descending compare finish times?
-            return ascending
+            return fromStart
                 ? x.startTime - y.startTime
-                : y.startTime - x.startTime;
+                : (y.startTime + y.duration) - (x.startTime + x.duration);
         });
 
         return vec;
     }
 
     override protected function isReadyToStart():Boolean { return true; }
-    override protected function animationStarted():void { _started = true; }
+    override protected function animationStarted():void {
+        _started = true;
+
+        _sortedTimeFrames = sortedTimeFrames(true);
+    }
 
     override protected function animationUpdated(parentTransition:CompoundTransition):void {
         var dt:Number   = _duration * _progress - _duration * _prevProgress;
@@ -123,7 +133,10 @@ public class TimelineComponent extends AbstractTweenComponent implements ITimeli
         if(dt == 0)
             return;
 
-        for each (var timeFrame:ITimeFrameComponent in children) {
+        var count:int = _sortedTimeFrames.length;
+        for (var i:int = 0; i < count; i++) {
+            var timeFrame:ITimeFrameComponent = _sortedTimeFrames[i];
+
             var diff:Number = timeFrame.startTime + timeFrame.duration - timeFrame.currentTime;
 
             if(_progress == 1 && dt > 0)
@@ -138,14 +151,18 @@ public class TimelineComponent extends AbstractTweenComponent implements ITimeli
     override protected function animationRepeated():void {
         var rev:Boolean = _repeatReversed && (_currentCycle % 2 == 1);
 
-        var sortedFrames:Vector.<ITimeFrameComponent> = sortedTimeFrames(rev);
+        _sortedTimeFrames = sortedTimeFrames(! rev);
 
-        for each (var timeFrame:ITimeFrameComponent in sortedFrames)
+        for (var i:int = _sortedTimeFrames.length - 1; i >= 0; i--) {
+            var timeFrame:ITimeFrameComponent = _sortedTimeFrames[i];
+
             timeFrame.seek(! rev ? 0 : _duration);
+        }
     }
 
     override protected function calculateProgress(time:Number, trans:ITweenTransition):Number {
         // apply transition only to children, not self
+        // TODO: is this OK?
         return super.calculateProgress(time, TweenTransitions.LINEAR);
     }
 
@@ -186,8 +203,6 @@ public class TimelineComponent extends AbstractTweenComponent implements ITimeli
 
         for each (var timeFrame:ITimeFrameComponent in children)
             _duration = Math.max(_duration, timeFrame.startTime + timeFrame.duration);
-
-        trace("duration: " + _duration);
     }
 }
 }

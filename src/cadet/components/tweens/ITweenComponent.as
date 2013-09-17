@@ -32,8 +32,11 @@ public interface ITweenComponent extends IAdvanceableComponent {
     function get duration():Number
     function set duration(value:Number):void
 
-    /** The time that has passed since the tween was created (in seconds). */
-    function get currentCycleTime():Number
+    /** The time that has passed since the tween was created (in seconds). It's negative, if delay is not over. */
+    function get cycleTime():Number
+
+    /** The total execution time of the tween (in seconds). It's from 0 to TweenUtil.totalDuration(this). */
+    function get totalTime():Number
 
     /** The current progress between 0 and 1, as calculated by the transition function. */
     function get progress():Number

@@ -92,17 +92,21 @@ public class TimeFrameComponent extends ComponentContainer implements ITimeFrame
 
         _currentTime += dt;
 
-        if((dt > 0 && (_currentTime < _startTime || _currentTime - dt > _startTime + _childTweenDuration))
-        || (dt < 0 && (_currentTime - dt < _startTime || _currentTime > _startTime + _childTweenDuration)))
+        var endTime:Number = _startTime + _childTweenDuration;
+
+        if((previousTime < _startTime && _currentTime < _startTime)
+        || (previousTime > endTime && _currentTime > endTime))
             return;
 
         var reminder:Number = 0;
 
         if(dt > 0)  reminder = _currentTime - _startTime;
-        else        reminder = _currentTime - (_startTime + _childTweenDuration);
+        else        reminder = _currentTime - endTime;
 
-        if(Math.abs(reminder) < Math.abs(dt))   _childTween.advance(reminder, parentTransition);
-        else                                    _childTween.advance(dt, parentTransition);
+        if(Math.abs(reminder) < Math.abs(dt))
+            _childTween.advance(reminder, parentTransition);
+        else
+            _childTween.advance(dt, parentTransition);
     }
 
     protected function onChildTweenInvalidated(event:ValidationEvent):void { invalidate(DURATION); }
