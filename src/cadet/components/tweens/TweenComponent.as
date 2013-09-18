@@ -123,7 +123,7 @@ public class TweenComponent extends AbstractTweenComponent {
         return _target != null;
     }
 
-    override protected function animationStarted():void {
+    override protected function animationStarted(reversed:Boolean):void {
         _started = true;
 
         // setup start and end values

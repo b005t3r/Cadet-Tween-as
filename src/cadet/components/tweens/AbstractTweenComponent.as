@@ -59,13 +59,13 @@ public class AbstractTweenComponent extends ComponentContainer implements ITween
     protected function isReadyToStart():Boolean { throw new UninitializedError("abstract method"); }
 
     /** Called before the animation has started. After this method returns, all subsequent calls to 'started' have to return true. Abstract. */
-    protected function animationStarted():void { throw new UninitializedError("abstract method"); }
+    protected function animationStarted(reversed:Boolean):void { throw new UninitializedError("abstract method"); }
 
     /** Called each frame, after internal members have been updated. Abstract. */
     protected function animationUpdated(parentTransition:CompoundTransition):void { throw new UninitializedError("abstract method"); }
 
     /** Called each frame, after internal members have been updated. */
-    protected function animationRepeated():void {  }
+    protected function animationRepeated(reversed:Boolean):void {  }
 
     // implemented methods
 
@@ -84,7 +84,7 @@ public class AbstractTweenComponent extends ComponentContainer implements ITween
             return;
 
         if(! started) {
-            animationStarted();
+            animationStarted(dt < 0);
 
             if(! started)
                 throw new UninitializedError("property 'started' not set to 'true' in the 'animationStarted()' handler");
@@ -135,9 +135,13 @@ public class AbstractTweenComponent extends ComponentContainer implements ITween
 
             if(_repeatCount == 0 || _currentCycle < _repeatCount) {
                 _cycleTime  = -currentCycleDelay; // next cycle's delay
-                _progress   = calculateProgress(_cycleTime, parentTransition);
+                parentTransition.pushTransition(_transition);
+                {
+                    _progress   = calculateProgress(_cycleTime, parentTransition);
+                }
+                parentTransition.popTransition();
 
-                animationRepeated();
+                animationRepeated(false);
 
                 if(hasEventListener(TweenEvent.REPEATED))
                     dispatchEvent(_repeatedEvent);
@@ -158,9 +162,13 @@ public class AbstractTweenComponent extends ComponentContainer implements ITween
 
             if(_repeatCount == 0 || _currentCycle >= 0) {
                 _cycleTime  = _duration;
-                _progress   = calculateProgress(_cycleTime, parentTransition);
+                parentTransition.pushTransition(_transition);
+                {
+                    _progress   = calculateProgress(_cycleTime, parentTransition);
+                }
+                parentTransition.popTransition();
 
-                animationRepeated();
+                animationRepeated(true);
 
                 if(hasEventListener(TweenEvent.REPEATED))
                     dispatchEvent(_repeatedEvent);
@@ -377,14 +385,12 @@ public class AbstractTweenComponent extends ComponentContainer implements ITween
             }
         }
 
-        if(parentTransition != null) {
-            parentTransition.pushTransition(_transition);
-            _progress = calculateProgress(_cycleTime, parentTransition);
-            parentTransition.popTransition();
-        }
-        else {
-            _progress = calculateProgress(_cycleTime, _transition);
-        }
+        if(parentTransition == null)
+            parentTransition = new CompoundTransition();
+
+        parentTransition.pushTransition(_transition);
+        _progress = calculateProgress(_cycleTime, parentTransition);
+        parentTransition.popTransition();
 
         return _cycleTime;
     }

@@ -86,6 +86,11 @@ public class TimelineComponent extends AbstractTweenComponent implements ITimeli
         var prevTotalTime:Number    = this.totalTime;
         var dt:Number               = totalTime - prevTotalTime;
 
+        var rev:Boolean = _repeatReversed && (_currentCycle % 2 == 1);
+        rev             = dt < 0 ? ! rev : rev;
+
+        _sortedTimeFrames = sortedTimeFrames(! rev);
+
         if(parentTransition == null)
             parentTransition = new CompoundTransition();
 
@@ -121,14 +126,15 @@ public class TimelineComponent extends AbstractTweenComponent implements ITimeli
     }
 
     override protected function isReadyToStart():Boolean { return true; }
-    override protected function animationStarted():void {
+    override protected function animationStarted(reversed:Boolean):void {
         _started = true;
 
-        _sortedTimeFrames = sortedTimeFrames(true);
+        if(_sortedTimeFrames == null)
+            _sortedTimeFrames = sortedTimeFrames(! reversed);
     }
 
     override protected function animationUpdated(parentTransition:CompoundTransition):void {
-        var dt:Number   = _duration * _progress - _duration * _prevProgress;
+        var dt:Number = _duration * _progress - _duration * _prevProgress;
 
         if(dt == 0)
             return;
@@ -148,8 +154,9 @@ public class TimelineComponent extends AbstractTweenComponent implements ITimeli
         }
     }
 
-    override protected function animationRepeated():void {
+    override protected function animationRepeated(reversed:Boolean):void {
         var rev:Boolean = _repeatReversed && (_currentCycle % 2 == 1);
+        rev             = reversed ? ! rev : rev;
 
         _sortedTimeFrames = sortedTimeFrames(! rev);
 
@@ -161,8 +168,8 @@ public class TimelineComponent extends AbstractTweenComponent implements ITimeli
     }
 
     override protected function calculateProgress(time:Number, trans:ITweenTransition):Number {
-        // apply transition only to children, not self
-        // TODO: is this OK?
+        // it's this timeline's progress, so don't add your own
+
         return super.calculateProgress(time, TweenTransitions.LINEAR);
     }
 
