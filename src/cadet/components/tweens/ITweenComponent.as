@@ -14,9 +14,12 @@ public interface ITweenComponent extends IAdvanceableComponent {
 
     /**
      * Sets this tween's current time to a value closest to the given one.
+     * This method changes tween's state to 'started' if it wasn't already set, so other properties
+     * as duration, delay, repeatCount etc. can't be modified after this call.
      *
      * @param totalTime         new totalTime, including repetitions and repetition delays; negative value means initial delay
      * @param suppressEvents    if true, no events will be dispatched
+     * @param parentTransition  parent's transition to apply to the tween along with its own
      * @returns                 new current time (not the given value)
      */
     function seek(totalTime:Number, suppressEvents:Boolean = true, parentTransition:CompoundTransition = null):Number

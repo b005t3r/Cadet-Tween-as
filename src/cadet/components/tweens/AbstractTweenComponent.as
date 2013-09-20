@@ -64,8 +64,11 @@ public class AbstractTweenComponent extends ComponentContainer implements ITween
     /** Called each frame, after internal members have been updated. Abstract. */
     protected function animationUpdated(parentTransition:CompoundTransition):void { throw new UninitializedError("abstract method"); }
 
-    /** Called each frame, after internal members have been updated. */
+    /** Called each repetition except last, after internal members have been updated. */
     protected function animationRepeated(reversed:Boolean):void {  }
+
+    /** Called on last repetition, after internal members have been updated. After this method returns, all subsequent calls to 'started' have to return false. Abstract. */
+    protected function animationFinished():void {  }
 
     // implemented methods
 
@@ -78,6 +81,9 @@ public class AbstractTweenComponent extends ComponentContainer implements ITween
 
         if(isInvalid("*"))
             validateNow();
+
+        if(_reversed)
+            dt = -dt;
 
         // this tween has finished its execution on the previous advance() call
         if(isFinished(dt))
@@ -149,6 +155,11 @@ public class AbstractTweenComponent extends ComponentContainer implements ITween
             else {
                 _currentCycle = _repeatCount - 1;
 
+                animationFinished();
+
+                if(started)
+                    throw new UninitializedError("property 'started' not set to 'false' in the 'animationFinished()' handler");
+
                 if(hasEventListener(TweenEvent.FINISHED))
                     dispatchEvent(_finishedEvent);
 
@@ -176,6 +187,11 @@ public class AbstractTweenComponent extends ComponentContainer implements ITween
             else {
                 _currentCycle = 0;
 
+                animationFinished();
+
+                if(started)
+                    throw new UninitializedError("property 'started' not set to 'false' in the 'animationFinished()' handler");
+
                 if(hasEventListener(TweenEvent.FINISHED))
                     dispatchEvent(_finishedEvent);
 
@@ -185,7 +201,8 @@ public class AbstractTweenComponent extends ComponentContainer implements ITween
 
         // simulate another repetition if necessary
         if(carryOverTime != 0)
-            advance(carryOverTime, parentTransition);
+            // because carryOverTime will be reversed by advance() call
+            advance(_reversed ? -carryOverTime : carryOverTime, parentTransition);
     }
 
     protected function isFinished(dt:Number):Boolean {
@@ -225,11 +242,22 @@ public class AbstractTweenComponent extends ComponentContainer implements ITween
     }
 
     public function seek(totalTime:Number, suppressEvents:Boolean = true, parentTransition:CompoundTransition = null):Number {
+        /*
         var time:Number = seekImpl(totalTime, suppressEvents, parentTransition);
 
         animationUpdated(parentTransition);
 
         return time;
+        */
+
+        totalTime = Math.min(TweenUtil.totalDuration(this), Math.max(totalTime, -_delay));
+
+        if(parentTransition == null)
+            parentTransition = new CompoundTransition();
+
+        advance(totalTime, parentTransition);
+
+        return _cycleTime;
     }
 
     public function get transition():ITweenTransition { return _transition; }
@@ -354,7 +382,7 @@ public class AbstractTweenComponent extends ComponentContainer implements ITween
     protected function calculateProgress(time:Number, trans:ITweenTransition):Number {
         var ratio:Number    = time / _duration;
         var revRep:Boolean  = _repeatReversed && (_currentCycle % 2 == 1);
-        revRep              = _reversed ? !revRep : revRep;
+        //revRep              = _reversed ? !revRep : revRep;
 
         if(ratio < 0)       ratio = 0;
         else if(ratio > 1)  ratio = 1;

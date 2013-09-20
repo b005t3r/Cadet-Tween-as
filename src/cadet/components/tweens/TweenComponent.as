@@ -146,5 +146,9 @@ public class TweenComponent extends AbstractTweenComponent {
             _target[_properties[i]] = currentValue;
         }
     }
+
+    override protected function animationFinished():void {
+        _started = false;
+    }
 }
 }

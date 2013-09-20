@@ -11,6 +11,7 @@ import cadet.components.tweens.transitions.ITweenTransition;
 import cadet.components.tweens.transitions.TweenTransitions;
 import cadet.core.IComponent;
 import cadet.events.ValidationEvent;
+import cadet.util.TweenUtil;
 
 public class TimelineComponent extends AbstractTweenComponent implements ITimelineComponent {
     protected var _started:Boolean                                  = false;
@@ -18,10 +19,8 @@ public class TimelineComponent extends AbstractTweenComponent implements ITimeli
     protected var _prevProgress:Number                              = 0;
     protected var _sortedTimeFrames:Vector.<ITimeFrameComponent>    = null; // initialized on start
 
-    public function TimelineComponent(time:Number = 0, transition:ITweenTransition = null, name:String = "Timeline") {
-        super(time, transition, name);
-
-        reset(time, transition);
+    public function TimelineComponent(transition:ITweenTransition = null, name:String = "Timeline") {
+        super(0, transition, name);
     }
 
     public function addTween(tween:ITweenComponent, startTime:Number = Number.NaN):void {
@@ -83,19 +82,25 @@ public class TimelineComponent extends AbstractTweenComponent implements ITimeli
     }
 
     override public function seek(totalTime:Number, suppressEvents:Boolean = true, parentTransition:CompoundTransition = null):Number {
+        totalTime = Math.min(TweenUtil.totalDuration(this), Math.max(totalTime, -_delay));
+
         var prevTotalTime:Number    = this.totalTime;
         var dt:Number               = totalTime - prevTotalTime;
 
-        var rev:Boolean = _repeatReversed && (_currentCycle % 2 == 1);
-        rev             = dt < 0 ? ! rev : rev;
-
-        _sortedTimeFrames = sortedTimeFrames(! rev);
+        // why was this ever necessary?
+        //var rev:Boolean = _repeatReversed && (_currentCycle % 2 == 1);
+        //rev             = dt < 0 ? ! rev : rev;
+        //_sortedTimeFrames = sortedTimeFrames(! rev);
 
         if(parentTransition == null)
             parentTransition = new CompoundTransition();
 
         var oldPaused:Boolean = _paused;
         _paused = false;
+
+        // seek always works forward, so reverse dt and advance will reverse it again
+        if(_reversed)
+            dt = -dt;
 
         advance(dt, parentTransition);
 
@@ -105,6 +110,17 @@ public class TimelineComponent extends AbstractTweenComponent implements ITimeli
     }
 
     override public function get started():Boolean { return _started;}
+
+/*
+    override public function set reversed(value:Boolean):void {
+        var rev:Boolean = _repeatReversed && (_currentCycle % 2 == 1);
+        rev             = value ? ! rev : rev;
+
+        _sortedTimeFrames = sortedTimeFrames(! rev);
+
+        super.reversed = value;
+    }
+*/
 
     protected function sortedTimeFrames(fromStart:Boolean = true):Vector.<ITimeFrameComponent> {
         var vec:Vector.<ITimeFrameComponent> = new <ITimeFrameComponent>[];
@@ -129,8 +145,10 @@ public class TimelineComponent extends AbstractTweenComponent implements ITimeli
     override protected function animationStarted(reversed:Boolean):void {
         _started = true;
 
-        if(_sortedTimeFrames == null)
-            _sortedTimeFrames = sortedTimeFrames(! reversed);
+        animationRepeated(reversed);
+
+        //if(_sortedTimeFrames == null)
+        //    _sortedTimeFrames = sortedTimeFrames(! reversed);
     }
 
     override protected function animationUpdated(parentTransition:CompoundTransition):void {
@@ -165,6 +183,12 @@ public class TimelineComponent extends AbstractTweenComponent implements ITimeli
 
             timeFrame.seek(! rev ? 0 : _duration);
         }
+    }
+
+    override protected function animationFinished():void {
+        _started = false;
+
+        _sortedTimeFrames = null;
     }
 
     override protected function calculateProgress(time:Number, trans:ITweenTransition):Number {

@@ -32,6 +32,7 @@ public class TimeFrameComponent extends ComponentContainer implements ITimeFrame
         if(isInvalid(DURATION))
             validateNow();
 
+        // current time goes from 0 fo Infinity (or parent Timeline's duration), so it must not be constrained
         //totalTime       = Math.min(_startTime + _childTweenDuration, Math.max(0, totalTime));
         _currentTime    = totalTime;
 
