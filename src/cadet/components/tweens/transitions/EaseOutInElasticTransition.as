@@ -8,7 +8,7 @@ import cadet.components.processes.*;
 
 public class EaseOutInElasticTransition implements ITweenTransition {
     public function get name():String {
-        return "Elastic Ease Out-In";
+        return "Ease Out-In-Elastic";
     }
 
     public function value(v:Number):Number {

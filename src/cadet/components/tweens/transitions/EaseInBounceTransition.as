@@ -8,7 +8,7 @@ import cadet.components.processes.*;
 
 public class EaseInBounceTransition implements ITweenTransition {
     public function get name():String {
-        return "Bounce Ease In";
+        return "Ease In-Bounce";
     }
 
     public function value(v:Number):Number {
