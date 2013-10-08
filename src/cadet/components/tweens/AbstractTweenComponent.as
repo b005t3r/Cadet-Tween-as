@@ -271,7 +271,14 @@ public class AbstractTweenComponent extends ComponentContainer implements ITween
         _transition = value;
     }
 
+    public function get transitionName():String { return transition != null ? transition.name : TweenTransitions.LINEAR.name; }
+    [Serializable][Inspectable(editor="DropDownMenu", dataProvider="[Linear,Ease In,Ease Out,Ease In-Out,Ease Out-In,Ease In-Back,Ease Out-Back,Ease In-Out-Back,Ease Out-In-Back,Ease In-Bounce,Ease Out-Bounce,Ease In-Out-Bounce,Ease Out-In-Bounce,Ease In-Elastic,Ease Out-Elastic,Ease In-Out-Elastic,Ease Out-In-Elastic]", priority="61")]
+    public function set transitionName(value:String):void {
+        transition = TweenTransitions.getByName(value);
+    }
+
     public function get duration():Number { return _duration; }
+    [Serializable][Inspectable(editor="NumberInput", min="0", max="360", numDecimalPlaces="4", priority="60")]
     public function set duration(value:Number):void {
         if(started)
             throw new Error("tween already started, call reset() first");
@@ -293,17 +300,19 @@ public class AbstractTweenComponent extends ComponentContainer implements ITween
     public function get progress():Number { return _progress; }
 
     public function get delay():Number { return _delay; }
+    [Serializable][Inspectable(editor="NumberInput", min="0", max="360", numDecimalPlaces="4", priority="62")]
     public function set delay(value:Number):void {
         if(started)
             throw new Error("tween already started, call reset() first");
 
         _cycleTime   += _delay - value;
-        _delay              = value > 0 ? value : 0;
+        _delay        = value > 0 ? value : 0;
 
         invalidate(DELAY);
     }
 
     public function get repeatCount():int { return _repeatCount; }
+    [Serializable][Inspectable(editor="NumberInput", min="0", max="100", numDecimalPlaces="0", priority="64")]
     public function set repeatCount(value:int):void {
         if(started)
             throw new Error("tween already started, call reset() first");
@@ -314,6 +323,7 @@ public class AbstractTweenComponent extends ComponentContainer implements ITween
     }
 
     public function get repeatDelay():Number { return _repeatDelay; }
+    [Serializable][Inspectable(editor="NumberInput", min="0", max="360", numDecimalPlaces="4", priority="65")]
     public function set repeatDelay(value:Number):void {
         if(started)
             throw new Error("tween already started, call reset() first");
@@ -329,6 +339,7 @@ public class AbstractTweenComponent extends ComponentContainer implements ITween
     }
 
     public function get repeatReversed():Boolean { return _repeatReversed; }
+    [Serializable][Inspectable(editor="CheckBox", priority="65")]
     public function set repeatReversed(value:Boolean):void {
         if(started)
             throw new Error("tween already started, call reset() first");
@@ -337,9 +348,11 @@ public class AbstractTweenComponent extends ComponentContainer implements ITween
     }
 
     public function get reversed():Boolean { return _reversed; }
+    [Serializable][Inspectable(editor="CheckBox", priority="62")]
     public function set reversed(value:Boolean):void { _reversed = value; }
 
     public function get roundToInt():Boolean { return _roundToInt; }
+    [Serializable][Inspectable(editor="CheckBox", priority="66")]
     public function set roundToInt(value:Boolean):void {
         if(started)
             throw new Error("tween already started, call reset() first");

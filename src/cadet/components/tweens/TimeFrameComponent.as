@@ -16,7 +16,7 @@ public class TimeFrameComponent extends ComponentContainer implements ITimeFrame
 
     protected var _startTime:Number             = 0;
     protected var _currentTime:Number           = 0;
-    private var _childTween:ITweenComponent   = null;
+    protected var _childTween:ITweenComponent   = null;
     protected var _childTweenDuration:Number    = 0;
 
     public function TimeFrameComponent(startTime:Number = 0,  name:String = "TimeFrame") {
@@ -46,6 +46,7 @@ public class TimeFrameComponent extends ComponentContainer implements ITimeFrame
     public function get currentTime():Number { return _currentTime; }
 
     public function get startTime():Number { return _startTime; }
+    [Serializable][Inspectable(editor="NumberInput", min="0", max="360", numDecimalPlaces="4", priority="60")]
     public function set startTime(value:Number):void {
         _startTime = value;
 
@@ -59,6 +60,7 @@ public class TimeFrameComponent extends ComponentContainer implements ITimeFrame
         return _childTweenDuration;
     }
 
+    [Serializable][Inspectable(editor="NumberInput", min="0", max="360", numDecimalPlaces="4", priority="61")]
     public function set duration(value:Number):void {
         if(_childTween == null)
             return;

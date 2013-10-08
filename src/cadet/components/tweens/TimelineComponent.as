@@ -35,6 +35,7 @@ public class TimelineComponent extends AbstractTweenComponent implements ITimeli
     }
 
     public function get paused():Boolean { return _paused; }
+    [Serializable][Inspectable(editor="CheckBox", priority="62")]
     public function set paused(value:Boolean):void { _paused = value; }
 
     override public function reset(duration:Number = 0, transition:ITweenTransition = null):void {
@@ -53,6 +54,7 @@ public class TimelineComponent extends AbstractTweenComponent implements ITimeli
         return _duration;
     }
 
+    [Serializable][Inspectable(editor="NumberInput", min="0", max="360", numDecimalPlaces="4", priority="60")]
     override public function set duration(value:Number):void {
         if(isInvalid(DURATION))
             validateNow();
