@@ -11,6 +11,7 @@ import cadet.components.tweens.transitions.ITweenTransition;
 import cadet.components.tweens.transitions.TweenTransitions;
 import cadet.core.IComponent;
 import cadet.events.ValidationEvent;
+import cadet.util.ComponentUtil;
 import cadet.util.TweenUtil;
 
 public class TimelineComponent extends AbstractTweenComponent implements ITimelineComponent {
@@ -111,17 +112,6 @@ public class TimelineComponent extends AbstractTweenComponent implements ITimeli
 
     override public function get started():Boolean { return _started;}
 
-/*
-    override public function set reversed(value:Boolean):void {
-        var rev:Boolean = _repeatReversed && (_currentCycle % 2 == 1);
-        rev             = value ? ! rev : rev;
-
-        _sortedTimeFrames = sortedTimeFrames(! rev);
-
-        super.reversed = value;
-    }
-*/
-
     protected function sortedTimeFrames(fromStart:Boolean = true):Vector.<ITimeFrameComponent> {
         var vec:Vector.<ITimeFrameComponent> = new <ITimeFrameComponent>[];
 
@@ -143,12 +133,19 @@ public class TimelineComponent extends AbstractTweenComponent implements ITimeli
 
     override protected function isReadyToStart():Boolean { return true; }
     override protected function animationStarted(reversed:Boolean):void {
+        // validate all tween on start
+        var tweens:Vector.<IComponent> = ComponentUtil.getChildrenOfType(this, TweenComponent, true);
+
+        var count:int = tweens.length;
+        for(var i:int = 0; i < count; i++) {
+            var tween:TweenComponent = TweenComponent(tweens[i]);
+
+            tween.validateProperties();
+        }
+
         _started = true;
 
         animationRepeated(reversed);
-
-        //if(_sortedTimeFrames == null)
-        //    _sortedTimeFrames = sortedTimeFrames(! reversed);
     }
 
     override protected function animationUpdated(parentTransition:CompoundTransition):void {
@@ -192,7 +189,7 @@ public class TimelineComponent extends AbstractTweenComponent implements ITimeli
     }
 
     override protected function calculateProgress(time:Number, trans:ITweenTransition):Number {
-        // it's this timeline's progress, so don't add your own
+        // it's this timeline's progress, so don't add your own transition - it will be applied to leaf-tweens anyway
 
         return super.calculateProgress(time, TweenTransitions.LINEAR);
     }
