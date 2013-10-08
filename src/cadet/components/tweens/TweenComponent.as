@@ -21,6 +21,8 @@ public class TweenComponent extends AbstractTweenComponent {
     protected var _startValues:Vector.<Number>  = new Vector.<Number>();
     protected var _endValues:Vector.<Number>    = new Vector.<Number>();
 
+    protected var _animatedProperties:String    = ""; // JSON string
+
     public function TweenComponent(target:IComponent = null, duration:Number = 1, transition:ITweenTransition = null, name:String = "Tween") {
         super(duration, transition, name);
 
@@ -29,6 +31,7 @@ public class TweenComponent extends AbstractTweenComponent {
 
     /** The target component that is animated. */
     public function get target():IComponent { return _target; }
+    [Serializable][Inspectable(editor="ComponentList", scope="scene", priority="50")]
     public function set target(value:IComponent):void {
         if(started)
             throw new Error("tween already started, call reset() first");
@@ -61,6 +64,79 @@ public class TweenComponent extends AbstractTweenComponent {
         }
 
         invalidate(PROPERTIES);
+    }
+
+    public function get animatedProperties():String {
+        return _animatedProperties;
+    }
+
+    [Serializable][Inspectable(priority="51")]
+    public function set animatedProperties(value:String):void {
+        parseAnimatedProperties(value);
+        _animatedProperties = createAnimatedProperties();
+    }
+
+    protected function createAnimatedProperties():String {
+        var propArray:Array = [];
+
+        var count:int = _properties.length;
+        for(var i:int = 0; i < count; i++) {
+            var name:String = _properties[i];
+            var start:Number = _startValues[i];
+            var end:Number = _endValues[i];
+
+            var obj:Object;
+
+            if(start == start) { // !isNaN
+                if(end == end) // !isNan
+                    obj = { "name" : name, "from" : start, "to" : end };
+                else
+                    obj = { "name" : name, "from" : start};
+            }
+            else {
+                obj = { "name" : name, "to" : end };
+            }
+
+            propArray[i] = obj;
+        }
+
+        return JSON.stringify(propArray);
+    }
+
+    protected function parseAnimatedProperties(value:String):void {
+        var propArray:Array = null;
+
+        var jsonObj:Object = JSON.parse(value);
+        propArray = Array(jsonObj);
+
+        // hack, I have no idea why is it wrapped in another array
+        if(propArray.length == 1 && propArray[0] is Array)
+            propArray = propArray[0];
+
+        _properties.length = 0;
+        _startValues.length = 0;
+        _endValues.length = 0;
+
+        for each (var obj:Object in propArray) {
+            if(! obj.hasOwnProperty("name"))
+                throw new TypeError("animated property has no name");
+
+            var hasFrom:Boolean = obj.hasOwnProperty("from");
+            var hasTo:Boolean   = obj.hasOwnProperty("to");
+
+            if(hasFrom) {
+                if(hasTo)
+                    animateFromTo(obj["name"], obj["from"], obj["to"]);
+                else
+                    animateFrom(obj["name"], obj["from"]);
+            }
+            else if(hasTo) {
+                animateTo(obj["name"], obj["to"]);
+            }
+            else {
+                throw new TypeError("animated property \'" + obj["name"] + "\' has no 'from' nor 'to' value");
+            }
+        }
     }
 
     /** Names of the properties animated using this tween. */
@@ -97,7 +173,9 @@ public class TweenComponent extends AbstractTweenComponent {
                 _endValues[i] = _target[_properties[i]] as Number;
         }
 
-        invalidate(PROPERTIES);
+        _animatedProperties = createAnimatedProperties();
+
+        delete _invalidationTable[PROPERTIES];
     }
 
     override public function reset(duration:Number = 1, transition:ITweenTransition = null):void {
@@ -111,13 +189,6 @@ public class TweenComponent extends AbstractTweenComponent {
     }
 
     override public function get started():Boolean { return _started; }
-
-    override protected function validate():void {
-        if(isInvalid(PROPERTIES))
-            validateProperties();
-
-        super.validate();
-    }
 
     override protected function isReadyToStart():Boolean {
         return _target != null;
