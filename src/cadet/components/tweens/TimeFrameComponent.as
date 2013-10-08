@@ -135,13 +135,15 @@ public class TimeFrameComponent extends ComponentContainer implements ITimeFrame
     }
 
     override protected function childRemoved(child:IComponent):void {
-        _childTween.removeEventListener(ValidationEvent.INVALIDATE, onChildTweenInvalidated);
+        if(_childTween != null) {
+            _childTween.removeEventListener(ValidationEvent.INVALIDATE, onChildTweenInvalidated);
 
-        _childTween = null;
+            _childTween = null;
+
+            invalidate(DURATION);
+        }
 
         super.childRemoved(child);
-
-        invalidate(DURATION);
     }
 }
 }
