@@ -268,7 +268,7 @@ public class AbstractTweenComponent extends ComponentContainer implements ITween
         if(started)
             throw new Error("tween already started, call reset() first");
 
-        _transition = transition;
+        _transition = value;
     }
 
     public function get duration():Number { return _duration; }
