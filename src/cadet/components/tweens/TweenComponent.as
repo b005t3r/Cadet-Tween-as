@@ -38,12 +38,12 @@ public class TweenComponent extends AbstractTweenComponent {
 
     /** Animate given property from current to given value. */
     public function animateTo(propertyName:String, value:Number):void {
-        animateFromTo(propertyName, valueFrom(propertyName), value);
+        animateFromTo(propertyName, Number.NaN, value);
     }
 
     /** Animate given property from given to current value. */
     public function animateFrom(propertyName:String, value:Number):void {
-        animateFromTo(propertyName, value, valueTo(propertyName));
+        animateFromTo(propertyName, value, Number.NaN);
     }
 
     /** Animate given property from and to given value. */
