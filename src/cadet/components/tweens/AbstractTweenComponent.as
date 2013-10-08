@@ -276,7 +276,7 @@ public class AbstractTweenComponent extends ComponentContainer implements ITween
         if(started)
             throw new Error("tween already started, call reset() first");
 
-        _duration = value > 0 ? value : 0;
+        _duration = value > 0 ? value : 0.0001;
 
         invalidate(DURATION);
     }
